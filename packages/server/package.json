@@ -1,0 +1,22 @@
+{
+  "name": "@campaign-settings/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --import tsx src/main.ts"
+  },
+  "dependencies": {
+    "@campaign-settings/shared": "workspace:*",
+    "@fastify/cookie": "11.0.2",
+    "@fastify/rate-limit": "11.1.0",
+    "@fastify/static": "10.1.2",
+    "fastify": "5.10.0",
+    "kysely": "0.29.2",
+    "pg": "8.21.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/pg": "8.20.0"
+  }
+}

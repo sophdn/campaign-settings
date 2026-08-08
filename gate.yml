@@ -1,0 +1,86 @@
+# gate.yml — corpos-gate declarative config for campaign-settings (ts stack).
+#
+# ADDITIVE / parity-first: mirrors what `pnpm check-all` (the existing
+# .githooks/pre-commit gate) already enforces — typecheck + lint +
+# format:check + the vitest 95/95/95/95 coverage floor — but split across
+# corpos-gate's tier model (ci ⊃ pre-push ⊃ pre-commit):
+#   pre-commit → fast checks (typecheck, lint, format) at commit time
+#   pre-push   → adds the full vitest coverage suite at push time
+# `run --tier=pre-push` runs BOTH tiers, so nothing the old single-stage
+# hook enforced is dropped — the coverage run simply moves from commit to
+# push. See .githooks/pre-commit and .githooks/pre-push.
+#
+# Prereq: corpos-gate must be on PATH (`make -C go corpos-gate-install`
+# from the corpos-toolkit checkout installs it to ~/go/bin). Bypass a
+# blocked commit/push with `git commit --no-verify` / `git push --no-verify`.
+stack: ts
+
+units:
+  - dir: '.'
+    # typecheck parity: the `typecheck` npm script is `tsc --noEmit -p
+    # tsconfig.json`; the adapter's `static` check runs
+    # `tsc -p tsconfig.json --noEmit` — semantically identical.
+    tsconfig:
+      - tsconfig.json
+
+checks:
+  # static == typecheck. Exact parity with `pnpm run typecheck`
+  # (tsc --noEmit -p tsconfig.json) via the unit's tsconfig above.
+  static: { enabled: true, tier: pre-commit }
+
+  # coverage: the demanding four-metric vitest floor (95 on ALL of
+  # statements/branches/functions/lines), matching vitest.config.ts's
+  # coverage.thresholds exactly. Runs the real `vitest run --coverage`
+  # suite. Moved to pre-push (slow) per the tier model.
+  coverage:
+    enabled: true
+    tier: pre-push
+    runner: vitest
+    thresholds:
+      statements: 95
+      branches: 95
+      functions: 95
+      lines: 95
+
+  # mutation: DISABLED (on-demand graduation, matching the Go adapter's
+  # model). Report-only when enabled; NEVER fails the gate. To enable:
+  #   1. install stryker:  pnpm add -D @stryker-mutator/core
+  #   2. flip enabled:true here (stays tier: ci — the slowest tier)
+  #   3. run on demand:  corpos-gate run --tier=ci
+  mutation: { enabled: false, tier: ci }
+
+# Custom checks preserve EXACT parity for the two `check-all` stages whose
+# commands differ materially from the adapter's defaults (`eslint .` /
+# `prettier` is not an adapter check at all). Run via `sh -c` at repo root.
+custom:
+  # lint: the repo lints `eslint packages` (a subtree), NOT the adapter's
+  # default `eslint .`. Wired as a custom call to the repo's own script to
+  # preserve the exact lint scope. (pnpm is the repo's package manager.)
+  - name: lint
+    cmd: 'pnpm run lint'
+    tier: pre-commit
+  # format:check: `prettier --check .`. Prettier is not an adapter check;
+  # preserved here so the existing pre-commit's format gate isn't dropped.
+  - name: format-check
+    cmd: 'pnpm run format:check'
+    tier: pre-commit
+  # pii-scan: block secrets (private keys / provider tokens) and project PII
+  # (.pii-denylist) from entering the repo; scans staged-added lines only, waive
+  # a false positive with an inline `pii-allow` marker. Fast -> pre-commit.
+  - name: pii-scan
+    cmd: 'bash scripts/pii-scan.sh'
+    tier: pre-commit
+  # typecheck-e2e: the adapter's `static` check only typechecks the root tsconfig
+  # (packages/*/src). e2e/ has its own tsconfig and was untypechecked — which let
+  # a stale grantEntityVisibility call slip into the e2e seed. This closes the gap
+  # at the gate; the `typecheck` npm script does the same for CI's check-all.
+  # dep-audit: compares `pnpm audit` against .audit-allowlist and fails on the
+  # difference in BOTH directions — a new advisory, or a waiver that has gone
+  # stale. pre-push rather than pre-commit because it needs the registry, and a
+  # network round-trip on every commit is how a check gets deleted.
+  - name: dep-audit
+    cmd: 'bash scripts/audit-gate.sh'
+    tier: pre-push
+  - name: typecheck-e2e
+    cmd: 'pnpm exec tsc --noEmit -p e2e/tsconfig.json'
+    tier: pre-commit

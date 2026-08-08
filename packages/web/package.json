@@ -1,0 +1,27 @@
+{
+  "name": "@campaign-settings/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@campaign-settings/shared": "workspace:*",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "react-router-dom": "7.18.1",
+    "jszip": "3.10.1"
+  },
+  "devDependencies": {
+    "vite": "8.0.16",
+    "@vitejs/plugin-react": "6.0.2",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/dom": "10.4.1",
+    "jsdom": "29.1.1"
+  }
+}

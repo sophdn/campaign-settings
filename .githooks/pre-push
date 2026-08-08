@@ -1,0 +1,23 @@
+#!/bin/sh
+# Pre-push gate — corpos-gate (stack-agnostic orchestrator).
+#
+# Runs the FULL pre-push-tier plan from gate.yml (ci ⊃ pre-push ⊃
+# pre-commit): every pre-commit check (static · lint · format-check) PLUS
+# the slow `coverage` check — the real `vitest run --coverage` suite gated
+# on the 95/95/95/95 four-metric floor (statements/branches/functions/
+# lines) from vitest.config.ts.
+#
+# NOTE: the coverage suite needs the dev Postgres up (see compose.yaml):
+#   docker compose up -d
+# Prereq: corpos-gate on PATH (make -C go corpos-gate-install; ~/go/bin on
+# PATH). Bypass with:  git push --no-verify
+set -e
+
+if ! command -v corpos-gate >/dev/null 2>&1; then
+  echo "pre-push: corpos-gate not found on PATH." >&2
+  echo "  install:  make -C go corpos-gate-install   (from the corpos-toolkit checkout; installs to ~/go/bin)" >&2
+  echo "  then ensure ~/go/bin is on PATH, or push with --no-verify to bypass." >&2
+  exit 1
+fi
+
+corpos-gate run --tier=pre-push

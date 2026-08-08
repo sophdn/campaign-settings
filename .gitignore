@@ -1,0 +1,29 @@
+node_modules/
+.pnpm-store/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# logs / os
+*.log
+.DS_Store
+
+# local data / fixtures (never commit world DBs)
+*.db
+*.db-wal
+*.db-shm
+/data/
+
+# playwright e2e artifacts
+test-results/
+playwright-report/
+.cache/
+
+# local media uploads (dev)
+packages/server/.uploads/

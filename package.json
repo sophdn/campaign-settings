@@ -1,0 +1,33 @@
+{
+  "name": "campaign-settings",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p e2e/tsconfig.json",
+    "lint": "eslint packages",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage",
+    "demo:seed": "node --import tsx packages/server/scripts/seed-demo.mts",
+    "check-all": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run test:cov",
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "e2e:install": "playwright install --with-deps chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.0",
+    "@types/node": "24.13.2",
+    "@vitest/coverage-v8": "4.1.9",
+    "eslint": "10.5.0",
+    "prettier": "3.8.4",
+    "tsx": "4.22.4",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.61.1",
+    "vitest": "4.1.9"
+  }
+}
