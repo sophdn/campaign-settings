@@ -1,0 +1,123 @@
+# Production stack for the public deploy: Caddy terminates TLS and is the only
+# thing bound to the host; the app and Postgres are reachable on the compose
+# network and nowhere else.
+#
+#   internet ──▶ caddy :80/:443 ──▶ app:8787 ──▶ postgres:5432
+#
+# Deliberately a SEPARATE file from compose.yaml rather than an override of it.
+# compose.yaml exists to give a developer a database on host port 5433, and that
+# published port is exactly what must never reach production — an override could
+# add services but could not take that mapping away.
+#
+# Run it with an explicit env file:
+#   docker compose -f compose.prod.yaml --env-file /etc/campaign-settings.env up -d
+#
+# Images pinned by digest, matching compose.yaml's Postgres. Re-pin deliberately
+# on an upgrade; never float a tag.
+
+services:
+  postgres:
+    image: postgres:17.5-alpine@sha256:6567bca8d7bc8c82c5922425a0baee57be8402df92bae5eacad5f01ae9544daa
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in the env file}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in the env file}
+    # No `ports`. The database is reachable from the app service and from
+    # nothing else — not from the host, not from the internet.
+    volumes:
+      - campaign-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: campaign-settings:latest
+    restart: unless-stopped
+    # `expose`, not `ports`: reachable from Caddy on the compose network, never
+    # published to the host. A published app port would be a second origin
+    # serving the same app over plain HTTP, which is the whole thing TLS
+    # termination is here to prevent.
+    expose:
+      - '8787'
+    environment:
+      # Assembled here rather than written out in the env file, so the password
+      # exists in exactly one place and the two services cannot drift apart.
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET (>= 32 chars) in the env file}
+      # NODE_ENV=production is what flags the session cookie Secure. It is set
+      # in the image too; repeated here because it is a security property and
+      # should be visible where the stack is read, not only where it is built.
+      NODE_ENV: production
+      SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-30}
+      # ONE hop: Caddy, and only Caddy. The app has no published port, so the
+      # only thing that can reach :8787 is the proxy on this network — which is
+      # what makes trusting its X-Forwarded-For safe here and not in general.
+      #
+      # This is not a nicety. Without it, req.ip is Caddy's container address
+      # for every visitor on earth, and the per-IP rate limits on /api/login,
+      # /api/register and the rest become ONE shared bucket: the first abuser
+      # locks out everybody, and the limit looks like it is working.
+      TRUST_PROXY: '1'
+      # Outbound email. Passed through unset-if-unset (no `:-` default) so that
+      # leaving them out of the env file keeps the logging mailer rather than
+      # booting a half-configured provider. The key is read from the env file at
+      # RUN time and is never in the image.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      APP_ORIGIN: ${APP_ORIGIN:-https://${SITE_HOST}}
+
+      # Every access gate, listed even though each defaults to `false` in the
+      # registry and would be off if omitted. Found by running this stack: a
+      # register succeeded and the very next login returned 403, because
+      # LOGIN_ENABLED is fail-closed and nothing here was passing it. The
+      # defaults are RIGHT — the portfolio ships closed and routes blocked
+      # surfaces to the contact modal — but an operator cannot decide about a
+      # gate they cannot see, and "why can nobody log in" is a bad first day.
+      # Naming all six here makes the posture of a deploy readable in one place.
+      LOGIN_ENABLED: ${LOGIN_ENABLED:-false}
+      PUBLIC_SIGNUP_ENABLED: ${PUBLIC_SIGNUP_ENABLED:-false}
+      PASSWORD_RESET_ENABLED: ${PASSWORD_RESET_ENABLED:-false}
+      SUGGESTIONS_ENABLED: ${SUGGESTIONS_ENABLED:-false}
+      ACCOUNT_MANAGEMENT_ENABLED: ${ACCOUNT_MANAGEMENT_ENABLED:-false}
+      DEMO_MODE: ${DEMO_MODE:-false}
+      DEMO_USERNAME: ${DEMO_USERNAME:-demo}
+    volumes:
+      - campaign-uploads:/var/lib/campaign-settings/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    restart: unless-stopped
+    # The only host-bound ports in the stack. 80 is required as well as 443:
+    # it is where the ACME HTTP challenge lands and where the redirect to HTTPS
+    # is served.
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      SITE_HOST: ${SITE_HOST:?set SITE_HOST (e.g. campaign-settings.com) in the env file}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in the env file}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates and ACME account keys. On a named volume because losing
+      # them means re-issuing on every recreate, and Let's Encrypt rate-limits
+      # that hard enough to take the site down for a week.
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+volumes:
+  campaign-pgdata:
+  campaign-uploads:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,25 @@
+#!/bin/sh
+# Pre-commit gate — corpos-gate (stack-agnostic orchestrator).
+#
+# Runs the FAST pre-commit-tier checks declared in gate.yml:
+#   static (tsc --noEmit -p tsconfig.json) · lint (eslint packages) ·
+#   format-check (prettier --check .)
+# The slower vitest 95/95/95/95 coverage floor runs at PUSH time — see
+# .githooks/pre-push. Together these two hooks preserve exactly what the
+# old `pnpm check-all` pre-commit gate enforced (coverage just moved from
+# commit to push, per corpos-gate's ci ⊃ pre-push ⊃ pre-commit tier model).
+#
+# Prereq: corpos-gate must be on PATH. Install it from the corpos-toolkit
+# checkout and put ~/go/bin on PATH:
+#   make -C go corpos-gate-install     # installs to ~/go/bin
+# Bypass a WIP commit with:  git commit --no-verify
+set -e
+
+if ! command -v corpos-gate >/dev/null 2>&1; then
+  echo "pre-commit: corpos-gate not found on PATH." >&2
+  echo "  install:  make -C go corpos-gate-install   (from the corpos-toolkit checkout; installs to ~/go/bin)" >&2
+  echo "  then ensure ~/go/bin is on PATH, or commit with --no-verify to bypass." >&2
+  exit 1
+fi
+
+corpos-gate run --tier=pre-commit

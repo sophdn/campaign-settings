@@ -1,0 +1,169 @@
+/*
+ * Design tokens — the single source of truth for the web app's visual
+ * language. Three tiers: primitives (raw values, never referenced outside this
+ * file) → semantic (the public `--color-*`/`--font-*`/… names the app uses) →
+ * per-component tokens live with their components. Dark-only by design (the
+ * theme stipulation); the semantic tier is the only place a future light theme
+ * would branch. Non-color tokens are palette-independent.
+ */
+
+/* Self-hosted editorial display serif for headings + titles. Body/UI stays on
+   Inter, code on the mono stack — the family change carries hierarchy. */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/fraunces-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./fonts/fraunces-600.woff2') format('woff2');
+}
+
+:root {
+  color-scheme: dark;
+
+  /* ---- Tier 1: primitives (cool-tinted neutral ramp + desaturated hues) ---- */
+  --gray-1000: #0e0e13;
+  --gray-950: #131318;
+  --gray-900: #1a1a22;
+  --gray-850: #21212b;
+  --gray-800: #2a2a35;
+  --gray-700: #363642;
+  --gray-400: #9a9aac;
+  --gray-300: #b9b9c6;
+  --gray-100: #eaeaf1;
+  --indigo-300: #aab6ff;
+  --indigo-400: #8ea2ff;
+  --red-400: #ec7883;
+  --green-300: #86dfa2;
+  --amber-300: #f0c674;
+
+  /* ---- Tier 2: semantic ---- */
+  /* surfaces — elevation reads via luminance steps, not drop shadows */
+  --color-background: var(--gray-950);
+  --color-surface: var(--gray-900);
+  --color-surface-elevated: var(--gray-850);
+  --color-surface-raised: var(--gray-800);
+  --color-surface-sunken: var(--gray-1000);
+
+  /* text — each verified >=4.5:1 on the lightest surface it can sit on */
+  --color-text-primary: var(--gray-100);
+  --color-text-secondary: var(--gray-300);
+  --color-text-muted: var(--gray-400);
+
+  /* borders — translucent-white hairlines carry depth; they adapt to any surface */
+  --color-border-subtle: rgba(255, 255, 255, 0.07);
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-border-strong: rgba(255, 255, 255, 0.2);
+
+  /* accent + semantic (desaturated so they don't vibrate on dark) */
+  --color-accent: var(--indigo-400);
+  --color-accent-text: var(--gray-1000);
+  --color-link: var(--indigo-300);
+  --color-danger: var(--red-400);
+  --color-danger-text: var(--gray-1000);
+  --color-success: var(--green-300);
+  --color-success-text: var(--gray-1000);
+  --color-warning: var(--amber-300);
+  --color-warning-text: var(--gray-1000);
+  --color-focus-ring: var(--indigo-300);
+
+  /* spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Fluid shell metrics. The app frame has exactly two size-dependent
+     measurements — the gutter that separates content from the viewport edge,
+     and the width of the world nav rail — and both track the viewport
+     continuously rather than snapping at a breakpoint. Expressed here so the
+     header, the page body and the rail cannot drift out of alignment, and so
+     "how does the shell narrow" is answered in one place instead of in a media
+     query per component.
+
+     --gutter:     24px at >=686px wide, easing to 12px on a small phone.
+     --rail-width: 12rem on desktop, easing to 8rem on a small phone.
+     --rail-font:  full body size from ~550px up, easing to ~14px on a phone.
+                   The rail narrows faster (0.67x) than text can shrink, so past
+                   a point the widest label ("Organizations", the longest single
+                   unbreakable word in the nav) no longer fits the track and
+                   breaks mid-word. Easing the rail's own type down closes that
+                   gap without spending any of the content column's width, which
+                   is the scarcer resource on a phone. */
+  --gutter: clamp(var(--space-3), 3.5vw, var(--space-5));
+  --rail-width: clamp(8rem, 26vw, 12rem);
+  --rail-font: clamp(14px, 1.1vw + 10px, var(--font-size-body));
+
+  /* typography */
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-base: Inter, Avenir, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', Menlo, Consolas, monospace;
+  --font-size-caption: 12px;
+  --font-size-body: 16px;
+  --font-size-heading3: 20px;
+  --font-size-heading2: 24px;
+  --font-size-heading1: 32px;
+  --font-size-display: 40px;
+  --font-weight-regular: 400;
+  --font-weight-emphasis: 600;
+  --line-height-tight: 1.25;
+  --line-height-default: 1.5;
+
+  /* radius */
+  --radius-1: 4px;
+  --radius-2: 8px;
+  --radius-3: 12px;
+  --radius-4: 16px;
+  --radius-pill: 9999px;
+
+  /* elevation — kept subtle; on dark, surface luminance + hairlines do the work */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-3: 0 12px 28px rgba(0, 0, 0, 0.45);
+
+  /* motion */
+  --motion-fast: 100ms;
+  --motion-default: 200ms;
+  --motion-slow: 300ms;
+}
+
+/* base reset + app shell typography, driven by the tokens above */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-base);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-default);
+  color: var(--color-text-primary);
+  background: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+
+  /* Nearly every string this app renders is authored by a user — entity names,
+     bodies, pasted URLs, invite tokens — so any of them may be one unbreakable
+     token far wider than a phone. `anywhere` rather than `break-word` is the
+     load-bearing choice: it is the only value that also shrinks an element's
+     MIN-CONTENT width, and min-content is what a flex/grid track refuses to
+     shrink below. Without it a single long URL in an entity body widens its
+     track, the grid, and the whole document, and the fixed-width header then
+     ends short of the page. Inherited from the root so this holds on the
+     signed-out pages too, not just the app shell. */
+  overflow-wrap: anywhere;
+}

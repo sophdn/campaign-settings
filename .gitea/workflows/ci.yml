@@ -1,0 +1,115 @@
+# Gitea Actions CI — runs the regression gate on every push to main and on
+# pull requests. Mirrors the local pre-commit hook: both run `pnpm check-all`
+# (typecheck · lint · format:check · test+coverage), the single source of truth
+# for "green". Requires Actions enabled + an act_runner advertising `ubuntu-latest`.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.5-alpine@sha256:6567bca8d7bc8c82c5922425a0baee57be8402df92bae5eacad5f01ae9544daa
+        env:
+          POSTGRES_USER: campaign
+          POSTGRES_PASSWORD: campaign
+          POSTGRES_DB: campaign_dev
+        options: >-
+          --health-cmd "pg_isready -U campaign -d campaign_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # The job runs in a container; reach the service container by name, not
+      # via a host port mapping (act_runner ≠ GitHub's host-VM networking).
+      DATABASE_URL: postgres://campaign:campaign@postgres:5432/campaign_dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # corepack pins pnpm to package.json's `packageManager` field.
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Regression gate
+        run: pnpm check-all
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.5-alpine@sha256:6567bca8d7bc8c82c5922425a0baee57be8402df92bae5eacad5f01ae9544daa
+        env:
+          POSTGRES_USER: campaign
+          POSTGRES_PASSWORD: campaign
+          POSTGRES_DB: campaign_dev
+        options: >-
+          --health-cmd "pg_isready -U campaign -d campaign_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # prepare-db.mts drops+creates exactly this database via the admin
+      # `postgres` connection; the server then boots against it. Reach the
+      # service container by name (act_runner ≠ GitHub's host-VM networking).
+      DATABASE_URL: postgres://campaign:campaign@postgres:5432/campaign_e2e
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: pnpm e2e
+
+  # ── mirror-publish (chain 438) ─────────────────────────────────────────────
+  # Publish a scrubbed, squashed snapshot of main to the public GitHub mirror on
+  # every green push to main. Gated on green CI (needs check + e2e) and main-only,
+  # so a red run or a PR never publishes. Force-pushes HEAD:main (squash model —
+  # public history is a single snapshot; proven via the _mirror-smoketest run).
+  mirror-publish:
+    needs: [check, e2e]
+    if: gitea.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Scrub, secret-scan, force-push public mirror
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          OUT="$(mktemp -d)/mirror"
+          bash scripts/publish-public.sh --repo . --out "$OUT"   # scrub HEAD → squashed tree
+          bash scripts/secret-scan-tree.sh "$OUT"                # fail-closed: abort if any secret
+          git -C "$OUT" push --force \
+            "https://x-access-token:${MIRROR_TOKEN}@github.com/sophdn/campaign-settings.git" \
+            HEAD:main

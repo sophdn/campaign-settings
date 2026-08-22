@@ -1,0 +1,28 @@
+packages:
+  - 'packages/*'
+
+# Supply-chain posture (campaign-settings: 2026 is an active attack year).
+# Publish cooldown: refuse any version published less than 7 days ago (10080 minutes).
+minimumReleaseAge: 10080
+# Block ALL dependency install/build scripts by default; allowlist explicitly if ever needed.
+onlyBuiltDependencies: []
+
+# Pinned transitive security overrides. These packages arrive through fastify,
+# whose own range still resolves to a vulnerable version; the advisories are
+# real and the patched releases are drop-in patch bumps within the same major.
+#
+# EXACT versions, never ranges — an override that floats is a supply-chain hole
+# wearing a fix's clothes. Each one is also >= the 7-day cooldown above.
+#
+# Re-check on every fastify bump: when fastify's own ranges catch up, DELETE the
+# entry rather than leaving a stale pin silently holding a dependency back.
+#   find-my-way  9.7.0  HTTP/2 DDoS — fastify
+#
+# The fast-uri@<3.1.4 pin was DELETED on 2026-08-08. GHSA-7p8r-x3mc-p8w7 needed
+# 3.1.5, and every declared range in the tree already admitted it — ajv and
+# @fastify/ajv-compiler want ^3.0.0/^3.0.1, fast-json-stringify wants ^4.0.0.
+# Nothing upstream was holding the tree back; only the cooldown was. A refreshed
+# lockfile carries the fix, so the pin had become exactly the stale floor this
+# comment warns about.
+overrides:
+  find-my-way@<9.7.0: 9.7.0

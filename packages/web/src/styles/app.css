@@ -1,0 +1,1407 @@
+/* App shell layout + shared component classes, driven entirely by the design
+   tokens in theme/tokens.css. Dark theme: elevation reads via surface
+   luminance + translucent-white hairline borders rather than heavy shadows. */
+
+/* editorial serif for headings + card/entity titles; UI + body stay on Inter */
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-emphasis);
+  letter-spacing: -0.01em;
+  line-height: var(--line-height-tight);
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  /* Same inline gutter as .app-main, so the product name sits on exactly the
+     same left edge as the page content below it at every viewport width. */
+  padding: var(--space-3) var(--gutter);
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-surface);
+}
+
+.app-header button {
+  margin-left: var(--space-2);
+}
+
+.app-main {
+  padding: var(--gutter);
+}
+
+/* world view: a nav rail beside the active screen. The rail keeps its place at
+   every width — it narrows rather than collapsing to a stacked block, so the
+   screen you navigated to stays where it was instead of appearing below a
+   full-height list of links. */
+.world {
+  display: grid;
+  grid-template-columns: var(--rail-width) 1fr;
+  gap: var(--gutter);
+}
+
+/* A grid item defaults to `min-width: auto`, meaning the `1fr` track refuses to
+   shrink below the widest unbreakable thing inside it — one long URL in an
+   entity body would widen this track, the grid, and the page. This lets the
+   column be as narrow as the rail leaves it, and the content wrap inside it. */
+.world-content {
+  min-width: 0;
+}
+
+.world-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--rail-font);
+}
+
+/* The world's name at the head of the rail. Shares the links' inline padding so
+   the column reads as one stack, and BREAKS rather than widening the rail: a
+   campaign called something unbroken and long would otherwise push the content
+   column off a 320px screen, which is the failure the rail was narrowed to fix. */
+.world-nav-title {
+  padding: var(--space-2) clamp(var(--space-2), 1.5vw, var(--space-3));
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* The inline padding shrinks with the rail so the label keeps the room, but the
+   BLOCK padding does not — that is what gives every link a comfortable touch
+   target on a phone, where the rail is at its narrowest. */
+.world-nav a {
+  padding: var(--space-2) clamp(var(--space-2), 1.5vw, var(--space-3));
+  border-radius: var(--radius-2);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.world-nav a:hover {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+}
+
+/* collapsible entity-kind tiers in the rail */
+.nav-tier {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.nav-tier summary {
+  padding: var(--space-2) clamp(var(--space-2), 1.5vw, var(--space-3));
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* the tier's links, indented from a solid left rule that runs their full height.
+   The indent is doubled by sitting inside the link padding too, so it is the
+   rail's tightest constraint on label width — it eases down with the rail. */
+.nav-tier-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-left: clamp(var(--space-1), 1vw, var(--space-3));
+  padding-left: clamp(var(--space-2), 1.5vw, var(--space-3));
+  border-left: 2px solid var(--color-border);
+}
+
+.nav-tier a {
+  display: block;
+}
+
+/* ── the nav on a phone: a drawer, not a column ──────────────────────────── */
+/* These sit BEFORE the 30rem query on purpose. Two rules of equal specificity
+   are decided by source order, and the base `display: none` below used to sit
+   after the query — which kept the hamburger hidden on exactly the screens it
+   exists for. */
+
+/* Hidden above the breakpoint, where the rail is right there in its own column.
+   Top-LEFT even though the drawer opens from the right, which is the
+   conventional pairing. */
+.world-nav-toggle {
+  display: none;
+  align-self: start;
+  justify-self: start;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-heading3);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.world-nav-toggle:hover,
+.world-nav-toggle:focus-visible {
+  border-color: var(--color-accent);
+}
+
+/* The scrim's padding exists so a CENTRED dialog does not touch the viewport
+   edges. A drawer wants the opposite — it enters from the edge — so an overlay
+   holding one gives its gutter up. Stated as a rule about what the overlay
+   contains rather than as a second class the caller has to remember to pass,
+   and rather than a negative margin that would have to guess the padding. */
+.modal-overlay:has(.modal-drawer) {
+  padding: 0;
+}
+
+/* The drawer surface. Overrides the centred dialog box: full height, anchored
+   to the right edge, and its own scroll — a world with every tier open is
+   taller than a phone. */
+.modal-drawer {
+  max-width: min(20rem, 85vw);
+  height: 100%;
+  margin-left: auto;
+  padding: var(--space-4);
+  border-radius: var(--radius-3) 0 0 var(--radius-3);
+  overflow-y: auto;
+}
+
+/* Inside the drawer the links get room: the rail's fluid clamps exist to keep a
+   narrow COLUMN readable, and there is no column here. */
+.world-nav-drawer {
+  font-size: var(--font-size-body);
+}
+
+/* a page's h1 + optional right-aligned actions (view toggle, etc.) */
+.page-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+/* shared segmented control (wiki view switch, suggestions status filter, …) */
+.segmented {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  border-color: var(--color-accent);
+}
+
+.wiki-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+.wiki-graph-wrap {
+  position: relative;
+}
+
+/* pan/zoom controls float over the top-right of the canvas */
+.graph-controls {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 1;
+  display: flex;
+  gap: var(--space-1);
+}
+
+.graph-controls button {
+  padding: var(--space-1) var(--space-3);
+}
+
+.wiki-graph {
+  display: block;
+  width: 100%;
+  height: min(70vh, 640px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-3);
+  background: var(--color-surface);
+  touch-action: none;
+  cursor: grab;
+}
+
+.wiki-graph:active {
+  cursor: grabbing;
+}
+
+/* login screen: center the form in the viewport regardless of width */
+.login-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+
+.login-form {
+  width: 100%;
+  max-width: 22rem;
+}
+
+/* forms + lists */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  max-width: 32rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  color: var(--color-text-secondary);
+}
+
+/* Form controls have a WIDE intrinsic width that they will not shrink below on
+   their own — a text input defaults to ~20 characters, a file input to its
+   button plus filename, a select to its longest option. As flex items (every
+   form here is a flex container) that intrinsic width becomes a floor, and one
+   control is enough to push a narrow page into horizontal scrolling. Clearing
+   the floor and capping at the container is what lets any of them sit in a
+   phone-width column. */
+input,
+textarea,
+select {
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+button {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-2);
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font: inherit;
+  font-weight: var(--font-weight-emphasis);
+  cursor: pointer;
+  transition:
+    filter var(--motion-fast),
+    background var(--motion-fast),
+    border-color var(--motion-fast);
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+/* neutral secondary button (explicit type="button" — toggles, cancels, row actions) */
+button[type='button'] {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+button[type='button']:hover:not(:disabled) {
+  filter: none;
+  background: var(--color-surface-raised);
+  border-color: var(--color-border-strong);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Button component variants. `button.` prefix ties the specificity of the base
+   element rules above so these win regardless of the button's type attribute. */
+button.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  border-color: transparent;
+}
+
+button.btn-secondary {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+button.btn-danger {
+  background: var(--color-danger);
+  color: var(--color-danger-text);
+  border-color: transparent;
+}
+
+button.btn-danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+  background: var(--color-danger);
+}
+
+/* one focus treatment for every interactive element */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* THE shared layout primitive: a full-width, padded card. Every page panel —
+   read views (Panel) and forms (FormCard) — uses this, so full-width is the
+   default and lives in exactly one place. Overrides the narrow default form
+   max-width for forms that opt in.
+
+   Padded on the same fluid gutter as the app frame: a card inset by 24px inside
+   a column the nav rail has already narrowed spends most of a phone's width on
+   whitespace, so the inset eases down exactly as the frame's does. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: none;
+  padding: var(--gutter);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-3);
+  background: var(--color-surface);
+}
+
+.form-card-title {
+  margin: 0;
+  font-size: var(--font-size-heading3);
+}
+
+/* responsive grid of navigation cards (worlds, entity lists, …). Overrides the
+   base `ul` flex-column so a set of CardLinks lays out as auto-filling tiles. */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-3);
+}
+
+/* the grid cell stretches so its single card fills the row's height */
+.card-grid > .card-link-item {
+  display: flex;
+}
+
+/* THE navigation card: a hoverable, full-height card that is a single link */
+.card-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-3);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  transition:
+    border-color var(--motion-fast),
+    background var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+.card-link:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-2);
+}
+
+.card-link-title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-heading3);
+  font-weight: var(--font-weight-emphasis);
+  line-height: var(--line-height-tight);
+}
+
+/* THE shared chip: entity-kind / interaction-type / status / role pills.
+   `.wiki-kind` takes a per-kind text colour via inline style; the rest inherit
+   the neutral treatment. Backs the previously-unstyled .touch-type/.link-type. */
+.badge,
+.wiki-kind,
+.touch-type,
+.link-type {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-emphasis);
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* a card's meta slot (a Badge) sits at the card's start, not stretched full width */
+.card-link-meta {
+  align-self: flex-start;
+}
+
+/* a left-aligned horizontal row of buttons (e.g. Save + Delete on an editor) */
+.form-actions {
+  display: flex;
+  gap: var(--space-2);
+  /* Wraps, so a row of controls cannot force the page wider than the viewport
+     on a phone — a flex row's min-content is the sum of its items. */
+  flex-wrap: wrap;
+}
+
+/* a subtle "← back" affordance at the top of a detail page */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  align-self: flex-start;
+  margin-bottom: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-caption);
+}
+
+.back-link:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-elevated);
+}
+
+/* a static (non-link) entity card — the interaction rows reuse the card look of
+   .card-link, with content stacked and a spaced-out action at the bottom */
+.entity-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-3);
+  background: var(--color-surface);
+}
+
+/* push the action to the bottom so, across equal-height grid cards, the Remove
+   buttons all line up in a row regardless of each card's content height */
+.entity-card .btn-danger {
+  margin-top: auto;
+}
+
+/* a titled list section with an inline filter toggle (e.g. "My Suggestions") */
+.list-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.list-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.list-head h2 {
+  margin: 0;
+}
+
+.entity-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.picker-results {
+  gap: var(--space-1);
+}
+
+.picker-results button {
+  width: 100%;
+  text-align: left;
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+  font-weight: var(--font-weight-regular);
+}
+
+.picker-results button[aria-pressed='true'] {
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+}
+
+.suggestion-list .suggestion {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-3);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.suggestion-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+[role='alert'] {
+  color: var(--color-danger);
+}
+
+[role='status'] {
+  color: var(--color-text-secondary);
+}
+
+.empty-state {
+  color: var(--color-text-muted);
+}
+
+/* entity body: [[name]] cross-references rendered as links */
+.entity-description {
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.entity-link {
+  color: var(--color-link);
+  text-decoration: none;
+}
+
+.entity-link:hover {
+  text-decoration: underline;
+}
+
+/* an unresolved [[name]] — surfaced so the author can fix the reference */
+.broken-link {
+  color: var(--color-danger);
+  text-decoration: underline dotted;
+  cursor: help;
+}
+
+/* live render of the body the owner is editing, below the textarea */
+.description-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface-sunken);
+}
+
+.preview-label {
+  font-size: var(--font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+/* Persistent field-level guidance (e.g. how [[ ]] references work). */
+.field-hint {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--font-size-caption);
+  color: var(--color-text-muted);
+}
+
+/* A field carrying a hint. Same layout as the plain `label` wrapper, but a div
+   with an explicitly-associated label — a wrapped hint would become part of the
+   field's accessible NAME, since a label's name is the text of its contents.
+   See field.tsx. */
+.hinted-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  color: var(--color-text-secondary);
+}
+
+/* A checkbox reads label-after-control, so its label is a ROW, against the
+   column every other field uses. Scoped to this wrapper rather than to
+   `input[type=checkbox]`'s parent so nothing else inherits the flip. */
+.checkbox-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+}
+
+.checkbox-field > label {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  width: auto;
+}
+
+/* A checkbox has no business stretching to the field width the way a text input
+   does — the shared `input` rule clears its intrinsic floor, which would leave
+   it filling the row. */
+.checkbox-field input[type='checkbox'] {
+  width: auto;
+  flex: none;
+}
+
+/* The kind's typed fields on a read view: label/value pairs in two columns that
+   collapse to one when there is no room for a value beside its label. */
+.typed-fields {
+  display: grid;
+  grid-template-columns: minmax(6rem, max-content) 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-4) 0 0;
+}
+
+.typed-fields dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.typed-fields dd {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 30rem) {
+  .typed-fields {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .typed-fields dd {
+    margin-bottom: var(--space-2);
+  }
+
+  /* The rail is not narrowed and not stacked — it is GONE, and reachable
+     through the drawer. Stacking is what put a full-height list of links above
+     every screen (the 600px regression); narrowing left a permanent column
+     stealing width from the screens with least of it. */
+  .world-nav {
+    display: none;
+  }
+
+  .world-nav-toggle {
+    display: block;
+  }
+
+  /* The rail's column goes with it, so the content gets the whole width. The
+     nav never occupies a ROW here: the hamburger is a small button on the same
+     row as the content, not a block above it. */
+  .world {
+    grid-template-columns: auto 1fr;
+  }
+
+  /* …and the drawer's own copy of the rail is always visible, whatever the
+     rule above says about the one in the grid. */
+  .world-nav-drawer {
+    display: flex;
+  }
+}
+
+/* The denizen census: one role per row, count pushed to the far edge. A list
+   rather than a table — there are two columns and no header worth reading. */
+.denizen-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.denizen-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* Import provenance, collapsed. Owner-only and rarely wanted, so it is a
+   <details> rather than a panel — closed it costs one line. */
+.imported-metadata {
+  width: 100%;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.imported-metadata pre {
+  overflow-x: auto;
+  padding: var(--space-3);
+  border-radius: var(--radius-2);
+  background: var(--color-surface-sunken);
+}
+
+/* The picker's field wrapper. Mirrors the plain `label` field layout, but is a
+   div with an explicitly-associated label — see text-area-field.tsx for why the
+   listbox must not live inside the label element. */
+.bracket-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  color: var(--color-text-secondary);
+}
+
+/* `[[name]]` completion. The list is anchored to the field rather than the
+   caret: caret-following would need per-glyph measurement of a textarea, and
+   a field-anchored list is stable, predictable, and never clipped off-screen. */
+/* A flex COLUMN, not a block, so the textarea stretches to the field's full
+   width exactly the way it does inside a plain `label` wrapper — one sizing
+   mechanism for both, rather than a `width: 100%` that has to be kept in sync
+   with the field's padding. The absolutely-positioned suggestion list is out of
+   flow, so the flex context does not affect it. */
+.bracket-picker {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.bracket-suggestions {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 16rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface-elevated);
+}
+
+.bracket-suggestions li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+.bracket-suggestions li.is-active {
+  background: var(--color-surface-sunken);
+}
+
+.bracket-suggestion-kind {
+  font-size: var(--font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The overflow counter is not selectable — it reports what the cap hid. */
+.bracket-suggestions-more {
+  cursor: default;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+/* Entity image attachments (media gallery). A list, so the count is announced
+   and each tile can carry its own remove control. */
+.entity-media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.entity-media-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.entity-media img {
+  width: 320px;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-3);
+  border: 1px solid var(--color-border-subtle);
+}
+.entity-media-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+/* The thumbnail is a button (it opens a dialog, it does not navigate), so it
+   has to shed the button chrome and be sized by the image inside it. The focus
+   ring stays — it is the only thing telling a keyboard user where they are. */
+.media-thumb-button {
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+
+/* The image lightbox: wider than the default dialog, because a picture at
+   28rem is the thumbnail again. Both axes are capped against the VIEWPORT so a
+   tall image scales down rather than pushing its own controls off-screen. */
+.modal-image {
+  max-width: min(64rem, 95vw);
+  align-items: center;
+}
+.media-lightbox-image {
+  max-width: 100%;
+  max-height: 75vh;
+  width: auto;
+  height: auto;
+  border-radius: var(--radius-3);
+}
+
+/* ── Maps ────────────────────────────────────────────────────────────────
+   The frame is a fixed-height window; the content layer inside it is
+   absolutely positioned and sized by the viewer, which owns the transform.
+   `overflow: hidden` is what makes the frame a window rather than a page that
+   grows — without it a zoomed map would push the rest of the page sideways.
+   `touch-action: none` hands every pointer gesture to the viewer, so a drag
+   pans the map instead of scrolling the page under it. */
+.map-frame {
+  position: relative;
+  height: min(70vh, 32rem);
+  overflow: hidden;
+  touch-action: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-3);
+  background: var(--color-surface);
+}
+
+.map-frame:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.map-frame-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  color: var(--color-text-muted);
+}
+
+.map-content {
+  position: absolute;
+}
+
+.map-content img {
+  width: 100%;
+  height: 100%;
+  /* The layer is already sized to the image's aspect ratio by fitToViewport, so
+     filling it exactly is what keeps a pin's percentage position honest. */
+  display: block;
+  user-select: none;
+}
+
+/* Positioned in percentages of the content layer, so the browser keeps each pin
+   over the same point of the image through every zoom and pan. The translate
+   centres the marker on its coordinate rather than hanging it below-right. */
+.map-pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: var(--space-1) var(--space-2);
+  max-width: 12rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--font-size-caption);
+  border-radius: var(--radius-1);
+  background: var(--color-accent);
+  color: var(--color-surface);
+}
+
+.map-controls {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.map-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.pin-list,
+.pin-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pin-list li,
+.pin-options li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* Modal — a portal-rendered dialog centered over a full-screen scrim. The
+   overlay dims and centers; the dialog is a constrained elevated surface. Used
+   by the generalized modal service, so its look lives once here. */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.modal-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 28rem;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-3);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-3);
+}
+
+/* the dialog takes programmatic focus (tabindex -1) as the trap anchor; no ring */
+.modal-dialog:focus {
+  outline: none;
+}
+
+/* A denomination being edited: name, multiplier, remove — one row on a wide
+   screen, stacked on a narrow one, because three controls do not fit a phone. */
+.denomination-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.denomination-row > *:first-child {
+  flex: 2 1 12rem;
+}
+
+.denomination-row > *:nth-child(2) {
+  flex: 1 1 6rem;
+}
+
+/* The read-only denomination list on a player's view. */
+.denomination-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.denomination-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* ── world dashboard (the world root) ────────────────────────────────────── */
+
+/* The panels stack in one column and inherit .panel's own padding, so the only
+   thing this rule owns is the rhythm between them. */
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter);
+}
+
+/* The role sentence. Larger than body text because it is the first thing read
+   on arrival and it is doing the job the dropped role badge used to. */
+.role-statement {
+  margin: 0;
+  font-size: var(--font-size-heading3);
+  line-height: var(--line-height-tight);
+}
+
+/* A panel heading with a quiet note beside it — used by the session panel to
+   say which ordering rule put that session on the screen. Baseline-aligned so
+   the note reads as an aside to the heading rather than a second heading. */
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.panel-note {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.session-date {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* The session's prose, clamped: the panel is an entry point, not the reading
+   surface. The session's own page is one tap away and carries the whole text. */
+.session-excerpt {
+  margin: 0;
+  color: var(--color-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.touch-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.touch-group h4 {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The entities a session touched, as a wrapping row of small links. A grid of
+   cards is the wrong furniture here: these are a quick-select, not a browse. */
+.touch-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.touch-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.touch-chip:hover {
+  background: var(--color-surface-elevated);
+  border-color: var(--color-accent);
+}
+
+/* The party, and the player's own character: a name on the left, who plays it
+   on the right. Overrides the base `ul` so the rows read as a list, not cards. */
+.party-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.party-list li,
+.my-character {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.party-player {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+/* Quick links to the Primary kinds, each with the viewer's own count. Auto-fill
+   so the row reflows rather than scrolling sideways on a phone. */
+.jump-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+  gap: var(--space-2);
+}
+
+.jump-links a {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.jump-links a:hover {
+  background: var(--color-surface-elevated);
+  border-color: var(--color-accent);
+}
+
+.jump-count {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── the entity editor's pencil ──────────────────────────────────────────── */
+
+/* Sits at the far right of the read view's heading row (.panel-head handles the
+   placement). Square and quiet: it is an affordance beside the title, not a
+   call to action competing with it. */
+.edit-toggle {
+  flex: none;
+  padding: var(--space-2);
+  min-width: 2.25rem;
+  line-height: 1;
+  font-size: var(--font-size-heading3);
+}
+
+.edit-toggle[aria-expanded='true'] {
+  background: var(--color-surface-elevated);
+  border-color: var(--color-accent);
+}
+
+/* ── secondary sections, folded away ─────────────────────────────────────── */
+
+/* The app's third use of the <details>/<summary> disclosure — .nav-tier and
+   .imported-metadata are the other two. The list-marker is replaced with a
+   rotating caret so the affordance reads the same at every size. */
+.accordion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.accordion > summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  cursor: pointer;
+  list-style: none;
+}
+
+/* The default triangle is a list marker in most engines and a ::-webkit-details-
+   marker in others; both are cleared so one caret rule serves everywhere. */
+.accordion > summary::-webkit-details-marker {
+  display: none;
+}
+
+.accordion > summary::before {
+  content: '▸';
+  color: var(--color-text-muted);
+  transition: transform 120ms ease;
+}
+
+.accordion[open] > summary::before {
+  content: '▾';
+}
+
+/* The heading keeps its level; only the box around it folds. */
+.accordion > summary h3 {
+  margin: 0;
+}
+
+.accordion-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── inline reference rows ───────────────────────────────────────────────── */
+
+/* Overrides the base `ul` flex-column gap: the rows carry their own dividing
+   rule, so a gap between them would read as two separations rather than one. */
+.entity-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* An arrow, a name, a kind tag, a rule underneath. Partway between the card the
+   mentions used to be and plain text — enough to say the row goes somewhere,
+   not enough to spend a tile on four words. */
+.entity-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-1);
+}
+
+.entity-row:hover {
+  background: var(--color-surface-elevated);
+}
+
+.entity-row-arrow {
+  color: var(--color-text-muted);
+}
+
+.entity-row-name {
+  color: var(--color-text-primary);
+}
+
+/* ── a control and its button on one line ────────────────────────────────── */
+
+/* A field wrapper is a full-width flex COLUMN, so a button placed after one
+   became the column's next row. This is the row: the field takes the slack, the
+   button takes only what it needs, and both sit on the same line. Wraps on a
+   phone rather than forcing the page wider. */
+.inline-control {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.inline-control > :first-child {
+  flex: 1 1 12rem;
+}
+
+.inline-control > .btn {
+  flex: none;
+}
+
+/* ── forms sit in a bounded container ────────────────────────────────────── */
+
+/* `.panel` sets `max-width: none` so a READ view fills the content column,
+   which is right for prose. A form is not prose: a 60rem-wide text input is
+   harder to use than a 34rem one, and a row of controls stretched across a
+   desktop column puts the label and its value at opposite ends of the screen.
+   So the form-flavoured panel caps its own measure and keeps the padded card. */
+.form-card,
+.bounded-form {
+  max-width: 34rem;
+}
+
+/* The add-a-relationship form. A stack of labelled controls, bounded by
+   `.bounded-form` above for the same reason the entity editor is. */
+.relationship-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+/* ── the entity avatar ───────────────────────────────────────────────────── */
+
+/* THE image for an entity, above its name. The plus overlaps the bottom-right
+   of the disc, which is why this is a positioning context. */
+.entity-avatar {
+  position: relative;
+  align-self: start;
+  width: 6rem;
+  height: 6rem;
+  flex: none;
+}
+
+/* A CIRCLE for every kind. That suits a portrait and crops a town map badly;
+   shape-per-kind is a later change, not a reason to hold the feature. `cover`
+   rather than `contain` so the disc is filled — a letterboxed circle reads as a
+   rendering fault rather than as a deliberate crop. */
+.entity-avatar-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  object-fit: cover;
+  background: var(--color-surface-elevated);
+}
+
+/* No image is the ORDINARY case, not a fault: a neutral disc, never a broken
+   frame with an alt-text stub in it. */
+.entity-avatar-empty {
+  background: var(--color-surface-sunken);
+}
+
+/* The plus. A label wrapping a file input — the input itself is taken out of
+   the flow rather than hidden with `display: none`, which would take it out of
+   the tab order and leave the control unreachable from a keyboard. */
+.entity-avatar-add {
+  position: absolute;
+  right: -0.25rem;
+  bottom: -0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-heading3);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.entity-avatar-add:hover,
+.entity-avatar-add:focus-within {
+  border-color: var(--color-accent);
+}
+
+.entity-avatar-add input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+}
+
+/* Which gallery tile is the one the page leads with. Rendered for every viewer,
+   not only the owner: a player looking at eight images should be able to tell
+   which one they saw at the top. */
+.media-primary-mark {
+  color: var(--color-accent);
+  font-size: var(--font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

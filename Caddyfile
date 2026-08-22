@@ -1,0 +1,40 @@
+# TLS termination and the only ingress. Caddy gets certificates from Let's
+# Encrypt automatically on first boot and renews them itself, so there is no
+# certbot, no cron, and no renewal to forget.
+#
+# `SITE_HOST` and `ACME_EMAIL` come from the env file compose passes in, so this
+# file is identical in staging and production and holds no secrets.
+
+{
+	# Where expiry warnings go. Without it Caddy still issues certs, but nobody
+	# hears about a renewal that has been failing.
+	email {$ACME_EMAIL}
+}
+
+# One canonical hostname. www redirects rather than serving a duplicate: two
+# origins serving the same app would mean session cookies that do not follow a
+# reader across them.
+www.{$SITE_HOST} {
+	redir https://{$SITE_HOST}{uri} permanent
+}
+
+{$SITE_HOST} {
+	encode zstd gzip
+
+	# `app` resolves on the compose network only — the app publishes no host
+	# port, so this proxy is the single way in.
+	reverse_proxy app:8787 {
+		# The app writes its own access log; what it cannot see is the real
+		# client address behind a proxy.
+		header_up X-Forwarded-For {remote_host}
+	}
+
+	# HSTS. Deliberately without `preload`: preloading is effectively permanent
+	# and is not a commitment to make on a domain's first day. Add it once the
+	# deploy has proven itself.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}
